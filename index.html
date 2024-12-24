@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catch the Falling Objects</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to bottom, #1abc9c, #16a085);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #fff;
+      flex-direction: column;
+    }
+
+    canvas {
+      display: block;
+      background: #ecf0f1;
+      border: 5px solid #2c3e50;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* Score and Lives Display */
+    .info {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+      display: flex;
+      gap: 20px;
+    }
+
+    .info div {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 10px;
+    }
+
+    /* Responsive Styling */
+    @media screen and (max-width: 600px) {
+      canvas {
+        width: 90%;
+        max-width: 400px;
+      }
+      .info {
+        font-size: 16px;
+      }
+    }
+
+    /* Add some animations */
+    @keyframes bounce {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-5px);
+      }
+    }
+
+    .game-over {
+      text-align: center;
+      font-size: 30px;
+      font-weight: bold;
+      color: red;
+      margin-bottom: 20px;
+    }
+
+    /* Play Again Button */
+    .play-again-btn {
+      background-color: #3498db;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 18px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      transition: background-color 0.3s;
+    }
+
+    .play-again-btn:hover {
+      background-color: #2980b9;
+    }
+
+    /* Basket Enhancement */
+    .basket {
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Object Styles */
+    .falling-object {
+      border-radius: 50%;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      animation: bounce 0.5s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="catchGame"></canvas>
+  <div class="info">
+    <div id="score">Score: 0</div>
+    <div id="lives">Lives: 3</div>
+  </div>
+  <div id="gameOverScreen" class="game-over" style="display: none;">
+    Game Over! Final Score: <span id="finalScore">0</span>
+    <br>
+    <button id="playAgain" class="play-again-btn">Play Again</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("catchGame");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = Math.min(400, window.innerWidth - 20);
+    canvas.height = Math.min(600, window.innerHeight - 100);
+
+    // Basket Properties
+    const basket = { x: canvas.width / 2 - 40, y: canvas.height - 50, width: 80, height: 10, speed: 20 };
+
+    // Falling Objects
+    const objects = [];
+    let score = 0;
+    let lives = 3;
+    let gameOver = false;
+
+    function createObject() {
+      if (!gameOver) {
+        objects.push({
+          x: Math.random() * (canvas.width - 20),
+          y: 0,
+          width: 20,
+          height: 20,
+          color: "red"
+        });
+      }
+    }
+    setInterval(createObject, 1000);
+
+    function update() {
+      if (gameOver) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw Basket
+      ctx.fillStyle = "#3498db";
+      ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+
+      // Move and Draw Objects
+      objects.forEach((obj, index) => {
+        ctx.fillStyle = obj.color;
+        ctx.beginPath();
+        ctx.arc(obj.x + obj.width / 2, obj.y + obj.height / 2, obj.width / 2, 0, 2 * Math.PI);
+        ctx.fill();
+
+        obj.y += 3;
+
+        // Check if Object Hits Basket
+        if (
+          obj.x < basket.x + basket.width &&
+          obj.x + obj.width > basket.x &&
+          obj.y + obj.height > basket.y
+        ) {
+          objects.splice(index, 1);
+          score++;
+        }
+
+        // Check if Object Missed
+        if (obj.y > canvas.height) {
+          objects.splice(index, 1);
+          lives--;
+          if (lives <= 0) {
+            gameOver = true;
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('gameOverScreen').style.display = 'block';
+          }
+        }
+      });
+
+      // Update Score and Lives
+      document.getElementById("score").innerText = `Score: ${score}`;
+      document.getElementById("lives").innerText = `Lives: ${lives}`;
+
+      requestAnimationFrame(update);
+    }
+
+    // Move Basket (Desktop)
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" && basket.x > 0) {
+        basket.x -= basket.speed;
+      } else if (e.key === "ArrowRight" && basket.x < canvas.width - basket.width) {
+        basket.x += basket.speed;
+      }
+    });
+
+    // Move Basket (Mobile Touch)
+    canvas.addEventListener("touchmove", (e) => {
+      const touchX = e.touches[0].clientX - canvas.offsetLeft;
+      if (touchX > basket.width / 2 && touchX < canvas.width - basket.width / 2) {
+        basket.x = touchX - basket.width / 2;
+      }
+    });
+
+    // Restart the Game
+    document.getElementById("playAgain").addEventListener("click", () => {
+      // Reset game state
+      score = 0;
+      lives = 3;
+      objects.length = 0;
+      gameOver = false;
+      document.getElementById('gameOverScreen').style.display = 'none';
+      update();
+    });
+
+    update();
+  </script>
+</body>
+</html>
